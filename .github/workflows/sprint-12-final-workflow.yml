@@ -1,0 +1,52 @@
+name: workflow-12sprint
+on: # запуск по заливке кода в главную ветку
+  push: # запуск по пулреквесту   в главную ветку
+    branches: [main]
+    tags: [v*]  # запуск при создании тега (v1.0.0 и т. п.)
+jobs:
+  job1:
+    name: test #проверять код на наличие ошибок и запускать тесты
+    runs-on: ubuntu-latest  # Указываем окружение
+    steps:
+      - name: Клонирование репозитория
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v4 # Этот шаг использует действие "actions/setup-go@v4", которое установит Go в систему   
+        with: # Для этого действия можно задать версию Go, которую надо установить   
+          go-version: '1.25' 
+      - name: Build
+        run: go build -v ./...
+      - name: Test
+        run: go test -v ./...
+           
+  job2:
+    name: publish   #при добавлении тегов должен автоматически публиковать приложение в DockerHub.
+    runs-on: ubuntu-latest # Указываем окружение
+    needs: job1  # Задача test должна быть завершена до запуска publish
+    if: startsWith(github.ref, 'refs/tags/') # Проверка, что тег начинается с "refs/tags"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4 # Этот шаг использует действие "actions/checkout@v4", которое проверит текущий код в репозитории//
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v3  # Этот шаг использует действие "docker/setup-buildx-action@v3", которое устанавливает Docker Buildx
+      - name: Log in to Docker Hub # Этот шаг использует действие "docker/login-action@v3", которое логинится в Docker Hub
+        uses: docker/login-action@v3 
+        continue-on-error: false
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }} # Получение логина и пароля из секретов
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }} 
+          
+      - name: Extract metadata (tags, labels) for Docker # Этот шаг использует действие "docker/metadata-action@v5.5.1", которое извлекает метаданные для Docker
+        id: meta # Используется для получения выходных данных
+        uses: docker/metadata-action@v5.5.1 #
+        with: 
+          images: evgenyvorobiev/parcel # Используется для указания имени Docker Hub-репозитория
+
+      - name: Build and push Docker Image # Этот шаг использует действие "docker/build-push-action@v5", которое строит и публикует Docker образ
+        uses: docker/build-push-action@v5
+        with: 
+          context: . # Используется для указания контекста сборки
+          push: true # Используется для указания того, что нужно публиковать образ
+          tags: ${{ steps.meta.outputs.tags }} # Используется для указания тегов
+          labels: ${{ steps.meta.outputs.labels }} # Используется для указания метаданных
+          platforms: linux/amd64,linux/arm64
