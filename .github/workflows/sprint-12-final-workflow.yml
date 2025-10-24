@@ -1,6 +1,6 @@
 name: workflow-12sprint
 on: # запуск по заливке кода в главную ветку
-  push: # запуск по пулреквесту   в главную ветку
+  push: 
     branches: [main]
     tags: [v*]  # запуск при создании тега (v1.0.0 и т. п.)
 jobs:
@@ -8,7 +8,7 @@ jobs:
     name: test #проверять код на наличие ошибок и запускать тесты
     runs-on: ubuntu-latest  # Указываем окружение
     steps:
-      - name: Клонирование репозитория
+      - name: cloning a repository
         uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v4 # Этот шаг использует действие "actions/setup-go@v4", которое установит Go в систему   
@@ -23,7 +23,7 @@ jobs:
     name: publish   #при добавлении тегов должен автоматически публиковать приложение в DockerHub.
     runs-on: ubuntu-latest # Указываем окружение
     needs: job1  # Задача test должна быть завершена до запуска publish
-    if: startsWith(github.ref, 'refs/tags/') # Проверка, что тег начинается с "refs/tags"
+    if: startsWith(github.ref, 'refs/tags/')  # Проверка, что тег начинается с "refs/tags/"
     steps:
       - name: Checkout
         uses: actions/checkout@v4 # Этот шаг использует действие "actions/checkout@v4", которое проверит текущий код в репозитории//
@@ -31,7 +31,7 @@ jobs:
         uses: docker/setup-buildx-action@v3  # Этот шаг использует действие "docker/setup-buildx-action@v3", которое устанавливает Docker Buildx
       - name: Log in to Docker Hub # Этот шаг использует действие "docker/login-action@v3", которое логинится в Docker Hub
         uses: docker/login-action@v3 
-        continue-on-error: false
+        continue-on-error: false 
         with:
           username: ${{ secrets.DOCKER_USERNAME }} # Получение логина и пароля из секретов
           password: ${{ secrets.DOCKER_ACCESS_TOKEN }} 
